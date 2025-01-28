@@ -9,7 +9,7 @@ If the module is visible, it will provide some basic debugging statistics
 
 An example config is shown below:
 
-{
+```{
     module: 'MMM-SimplePIR',
     //position: 'top_left',
     hidden: true,
@@ -22,4 +22,4 @@ An example config is shown below:
         displayOnPin: 23,       //connect this to either the on button on a display, or to the RF outlet controller [or whatever you want]
         displayOffPin: 24,      //connect this to either the off button on a display, or to the RF outlet controller [or whatever you want]
     }
-},
+},```
