@@ -1,0 +1,5 @@
+{
+    "dependencies": {
+        "@iiot2k/gpiox": "latest"
+    }
+}
