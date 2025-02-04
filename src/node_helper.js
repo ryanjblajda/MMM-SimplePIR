@@ -43,7 +43,7 @@ module.exports = NodeHelper.create({
     }
   },
 
-  displayOn: function() {
+  displayOnPulse: function() {
     Log.log(`[MMM-SimplePIR] making sure the display is physically on...`)
     GPIO.set_gpio(this.config.displayOnPin, true)
 
@@ -54,7 +54,7 @@ module.exports = NodeHelper.create({
     this.sendSocketNotification('display', this.displayPower);
   },
 
-  displayOff: function() {
+  displayOffPulse: function() {
     GPIO.set_gpio(this.config.displayOffPin, true)
     //give time for the guy to actually work
     setTimeout(() => {
@@ -62,6 +62,13 @@ module.exports = NodeHelper.create({
     }, 100);
     this.displayPower = false;
     this.sendSocketNotification('display', this.displayPower);
+  },
+
+  displayState: function(state) {
+    //if the config is set up to invert the pin, invert the state
+    if (this.config.displayOnOffInvertState) { state = !state; }
+    //finally set the state of the output pin
+    GPIO.set_gpio(this.config.displayOnOffPin, state);
   },
 
   onPIRSensorEvent: function(state, edge) 
@@ -99,31 +106,15 @@ module.exports = NodeHelper.create({
     return 1000 * interval * 60;
   },
 
-  setupCallback: function()
-  {
+  configurePIRSensor: function() {
     let sensorPinOk = false;
-    if (this.config.debug) Log.info(`[MMM-SimplePIR] attempting to set up PIR sensor watch callback...`);
+
     if (this.config.pirSensorPin != -1) {
       if (this.config.debug) Log.info(`[MMM-SimplePIR] ${this.config.pirSensorPin} is a valid input pin, creating watch`)
       GPIO.watch_gpio(this.config.pirSensorPin, GPIO.GPIO_MODE_INPUT_PULLUP, this.debounceUS, GPIO.GPIO_EDGE_BOTH, this.onPIRSensorEvent.bind(this));
       sensorPinOk = true;
     }
-    else 
-    {
-      Log.warn(`[MMM-SimplePIR] unable to load a valid pin from the configuration!`)
-    }
-
-    if (this.config.displayOnPin != -1 && this.config.displayOffPin != -1) {
-      if (this.config.debug) Log.info(`[MMM-SimplePIR] ${this.config.displayOnPin} && ${this.config.displayOffPin} are valid pins, initializing as outputs...`)
-      GPIO.init_gpio(this.config.displayOnPin, GPIO.GPIO_MODE_OUTPUT, 0);
-      GPIO.init_gpio(this.config.displayOffPin, GPIO.GPIO_MODE_OUTPUT, 0);
-
-      this.displayOn();
-    }
-    else 
-    {
-       Log.warn(`[MMM-SimplePIR] unable to load valid pins from the configuration!`)
-    }
+    else { Log.warn(`[MMM-SimplePIR] unable to load a valid pin from the configuration!`); }
 
     if (sensorPinOk == true)
     {
@@ -131,5 +122,39 @@ module.exports = NodeHelper.create({
       state = GPIO.get_gpio(this.config.pirSensorPin)
       this.onPIRSensorEvent(state, 0)
     }
+  },
+
+  usePulsePins: function() {
+    //if we are using the pulse pins, do registration
+    if (this.config.displayOnPin != -1 && this.config.displayOffPin != -1) {
+      if (this.config.debug) Log.info(`[MMM-SimplePIR] ${this.config.displayOnPin} && ${this.config.displayOffPin} are valid pins, initializing as outputs...`)
+      GPIO.init_gpio(this.config.displayOnPin, GPIO.GPIO_MODE_OUTPUT, 0);
+      GPIO.init_gpio(this.config.displayOffPin, GPIO.GPIO_MODE_OUTPUT, 0);
+
+      this.displayOnPulse();
+    }
+    else { Log.warn(`[MMM-SimplePIR] unable to load valid pins from the configuration!`); }
+  },
+
+  useLatchingPin: function() {
+    //if we are using a single relay, use that pin
+    if (this.config.displayOnOffPin != -1) {
+      if (this.config.debug) Log.info(`[MMM-SimplePIR] ${this.config.displayOnOffPin} is a valid pin, initializing as an output...`);
+      GPIO.init_gpio(this.config.displayOnOffPin, GPIO.GPIO_MODE_OUTPUT, 0);
+      //set the display on.
+      this.displayState(true);
+    }
+  },
+
+  setupCallback: function()
+  {
+
+    if (this.config.debug) Log.info(`[MMM-SimplePIR] attempting to set up PIR sensor watch callback...`);
+    //is the config is setup for using the on/off pins, fire the appropriate function
+    if (this.config.useOnOffPin) { this.usePulsePins(); }
+    //if not, fire the latching function
+    else { this.useLatchingPin(); }
+    //lastly, configure the PIR sensor and check the initial state
+    this.configurePIRSensor();
   },
 });
