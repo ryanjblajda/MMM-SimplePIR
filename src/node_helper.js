@@ -32,13 +32,15 @@ module.exports = NodeHelper.create({
     Log.log(`[MMM-SimplePIR] muting the display due to lack of motion`)
     this.sendSocketNotification('mute', true)
     //if the on/off screen timeout flag is set to false we want to kill the display when the image mute timeout fires.
-    if (this.config.displayOnOffUsesOffScreenTimeout == false && this.useOnOffPin == true) { this.displayState(false); }
+    if (this.config.displayOnOffUsesOffScreenTimeout == false && this.useOnOffPin == true) {
+      if (this.config.debug) { Log.info(`[MMM-SimplePIR] is configured to turn display off @ the mute timeout!!`)}
+      this.displayState(false); 
+    }
   },
 
   onOffIntervalExpired: function()
   {
     Log.log(`[MMM-SimplePIR] turning off physical display due to an extended lack of motion.`)
-    Log.log(`[MMM-SimplePIR] making sure the display is physically off...`)
     if (this.config.displayOnOffUsesOffScreenTimeout && this.useOnOffPin) { 
       //if we are supposed to be using this timeout, and the on-off single latching relay pin feature is enabled, use this.
       if (this.displayPower) { this.displayState(false); }
@@ -50,7 +52,7 @@ module.exports = NodeHelper.create({
   },
 
   displayOnPulse: function() {
-    Log.log(`[MMM-SimplePIR] making sure the display is physically on...`)
+    if (this.config.debug) { Log.log(`[MMM-SimplePIR] pulsing the on pin!`); }
     GPIO.set_gpio(this.config.displayOnPin, true)
 
     setTimeout(() => {
@@ -61,6 +63,7 @@ module.exports = NodeHelper.create({
   },
 
   displayOffPulse: function() {
+    if (this.config.debug) { Log.info(`[MMM-SimplePIR] pulsing the off pin!!`)}
     GPIO.set_gpio(this.config.displayOffPin, true)
     //give time for the guy to actually work
     setTimeout(() => {
@@ -73,7 +76,11 @@ module.exports = NodeHelper.create({
   displayState: function(state) {
     var gpioState = state;
     //if the config is set up to invert the pin, invert the state
-    if (this.config.displayOnOffInvertState) { gpioState = !state; }
+    if (this.config.debug) { Log.info(`[MMM-SimplePIR] setting latching relay to ${state}!!`)}
+    if (this.config.displayOnOffInvertState) { 
+      gpioState = !state; 
+      if (this.config.debug) { Log.info(`[MMM-SimplePIR] is configured invert the state, new state ${gpioState}!!`)}
+    }
     //finally set the state of the output pin
     GPIO.set_gpio(this.config.displayOnOffPin, gpioState);
     //assign the displaypower variable after firing the GPIO.
