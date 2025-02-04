@@ -135,6 +135,7 @@ module.exports = NodeHelper.create({
   },
 
   usePulsePins: function() {
+    if (this.config.debug) { Log.info(`[MMM-SimplePIR] is configured to use pulse pins!!`)}
     //if we are using the pulse pins, do registration
     if (this.config.displayOnPin != -1 && this.config.displayOffPin != -1) {
       if (this.config.debug) Log.info(`[MMM-SimplePIR] ${this.config.displayOnPin} && ${this.config.displayOffPin} are valid pins, initializing as outputs...`)
@@ -147,6 +148,7 @@ module.exports = NodeHelper.create({
   },
 
   useLatchingPin: function() {
+    if (this.config.debug) { Log.info(`[MMM-SimplePIR] is configured to use a latching relay pin!!`)}
     //if we are using a single relay, use that pin
     if (this.config.displayOnOffPin != -1) {
       if (this.config.debug) Log.info(`[MMM-SimplePIR] ${this.config.displayOnOffPin} is a valid pin, initializing as an output...`);
