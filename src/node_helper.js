@@ -124,8 +124,8 @@ module.exports = NodeHelper.create({
   },
 
   configurePIRSensor: function() {
+    if (this.config.debug) Log.info(`[MMM-SimplePIR] attempting to set up PIR sensor watch callback...`);
     let sensorPinOk = false;
-
     if (this.config.pirSensorPin != -1) {
       if (this.config.debug) Log.info(`[MMM-SimplePIR] ${this.config.pirSensorPin} is a valid input pin, creating watch`)
       GPIO.watch_gpio(this.config.pirSensorPin, GPIO.GPIO_MODE_INPUT_PULLUP, this.debounceUS, GPIO.GPIO_EDGE_BOTH, this.onPIRSensorEvent.bind(this));
@@ -167,8 +167,6 @@ module.exports = NodeHelper.create({
 
   setupCallback: function()
   {
-
-    if (this.config.debug) Log.info(`[MMM-SimplePIR] attempting to set up PIR sensor watch callback...`);
     //is the config is setup for using the on/off pins, fire the appropriate function
     if (this.config.useOnOffPin) { this.usePulsePins(); }
     //if not, fire the latching function
