@@ -31,15 +31,21 @@ module.exports = NodeHelper.create({
   {
     Log.log(`[MMM-SimplePIR] muting the display due to lack of motion`)
     this.sendSocketNotification('mute', true)
+    //if the on/off screen timeout flag is set to false we want to kill the display when the image mute timeout fires.
+    if (this.config.displayOnOffUsesOffScreenTimeout == false && this.useOnOffPin == true) { this.displayState(false); }
   },
 
   onOffIntervalExpired: function()
   {
     Log.log(`[MMM-SimplePIR] turning off physical display due to an extended lack of motion.`)
     Log.log(`[MMM-SimplePIR] making sure the display is physically off...`)
-    if (this.displayPower)
-    {
-      this.displayOff();
+    if (this.config.displayOnOffUsesOffScreenTimeout && this.useOnOffPin) { 
+      //if we are supposed to be using this timeout, and the on-off single latching relay pin feature is enabled, use this.
+      if (this.displayPower) { this.displayState(false); }
+    }
+    else { 
+      //if not, pulse the normal pin
+      if (this.displayPower) { this.displayOffPulse(); } 
     }
   },
 
@@ -65,10 +71,15 @@ module.exports = NodeHelper.create({
   },
 
   displayState: function(state) {
+    var gpioState = state;
     //if the config is set up to invert the pin, invert the state
-    if (this.config.displayOnOffInvertState) { state = !state; }
+    if (this.config.displayOnOffInvertState) { gpioState = !state; }
     //finally set the state of the output pin
-    GPIO.set_gpio(this.config.displayOnOffPin, state);
+    GPIO.set_gpio(this.config.displayOnOffPin, gpioState);
+    //assign the displaypower variable after firing the GPIO.
+    this.displayPower = false;
+    //send the notification
+    this.sendSocketNotification('display', this.displayPower);
   },
 
   onPIRSensorEvent: function(state, edge) 
@@ -93,11 +104,10 @@ module.exports = NodeHelper.create({
       {
         clearTimeout(this.blankTimer);
         clearTimeout(this.offTimer);
-        //make sure the display is physically on.
+        //make sure the display mute is off.
         this.sendSocketNotification('mute', false);
-        if (this.displayPower == false) {
-          this.displayOn();
-        }
+        //if we think the display is off, turn it on.
+        if (this.displayPower == false) { this.displayOnPulse(); }
       }
     }
   },
@@ -130,7 +140,7 @@ module.exports = NodeHelper.create({
       if (this.config.debug) Log.info(`[MMM-SimplePIR] ${this.config.displayOnPin} && ${this.config.displayOffPin} are valid pins, initializing as outputs...`)
       GPIO.init_gpio(this.config.displayOnPin, GPIO.GPIO_MODE_OUTPUT, 0);
       GPIO.init_gpio(this.config.displayOffPin, GPIO.GPIO_MODE_OUTPUT, 0);
-
+      //make sure the display is on at startup.
       this.displayOnPulse();
     }
     else { Log.warn(`[MMM-SimplePIR] unable to load valid pins from the configuration!`); }
